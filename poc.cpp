@@ -1,17 +1,43 @@
 #pragma leco app
+#pragma leco add_resource "VictorMono-Regular.otf"
 export module poc;
 
 import casein;
-import silog;
+import jute;
 import quack;
-import sith;
-import sitime;
 import vee;
 import voo;
+import what_the_font;
+
+static constexpr const jute::view lorem{
+    "Enim nostrum omnis dolorum non unde est velit et. Doloribus fugiat "
+    "nesciunt delectus debitis ut dolorum at. Illo veniam laboriosam porro "
+    "dolorem dolor. Aliquam eius eos velit. Reprehenderit numquam minima "
+    "fugiat nostrum non. Ipsa quia odit voluptatem voluptas beatae. "
+
+    "Est est possimus consequatur quidem. Aut aut quo aliquid veritatis "
+    "consequuntur deserunt perspiciatis possimus. Dolorem qui laboriosam "
+    "maiores ipsam accusamus voluptas rerum. "
+
+    "Quisquam nisi autem consectetur accusantium officiis quos cupiditate. "
+    "Suscipit accusamus itaque quibusdam nesciunt sed et eos. Architecto omnis "
+    "excepturi excepturi ut dolorum qui distinctio. "
+
+    "Fuga magnam fuga eligendi pariatur nihil pariatur et. Sit dolore nihil "
+    "quia quo rerum. Aliquam ut aliquid quia. Et et necessitatibus asperiores. "
+    "Natus nihil eum quia nostrum. Quo vel reiciendis aliquid eveniet. "
+
+    "Eveniet velit tempora provident assumenda perspiciatis et. Odio qui est "
+    "expedita enim accusamus fuga inventore quia. Laborum iste aut deleniti. "
+    "Pariatur est consequatur accusamus quasi dolor."};
+
+static constexpr const auto font_h = 32;
+
+static wtf::library g_library{};
+static wtf::face g_face = g_library.new_face("VictorMono-Regular.otf", font_h);
 
 constexpr const auto max_batches = 100;
 class renderer : public voo::casein_thread {
-
 public:
   void run() override {
     voo::device_and_queue dq{"quack", native_ptr()};
@@ -22,14 +48,42 @@ public:
     ib.map_all([](auto p) {
       auto &[cs, ms, ps, us] = p;
       ps[0] = {{0, 0}, {1, 1}};
-      cs[0] = {1, 1, 1, 1};
-      us[0] = {};
+      cs[0] = {};
+      us[0] = {{0, 0}, {1, 1}};
       ms[0] = {1, 1, 1, 1};
     });
 
-    voo::h2l_image a{dq, 16, 16};
+    voo::h2l_image a{dq, 1024, 1024, false};
     auto smp = vee::create_sampler(vee::nearest_sampler);
     auto dset = ps.allocate_descriptor_set(a.iv(), *smp);
+
+    {
+      unsigned charid[10240]; // TODO: max(codepoint) or hashmap
+      unsigned curid{};
+      unsigned px{};
+      unsigned py{};
+
+      voo::mapmem m{a.host_memory()};
+      auto charmap = static_cast<unsigned char *>(*m);
+
+      auto s = g_face.shape_en(lorem);
+      for (auto g : s.glyphs()) {
+        auto &id = charid[g.codepoint()];
+        if (id > 0)
+          continue;
+
+        g.load_glyph();
+        auto [x, y, w, h] = g.bitmap_rect();
+        if (px + w + 2 > 1024) { // half width forces line break
+          px = 0;
+          py += font_h; // TODO: max(h + 2)
+        }
+
+        id = ++curid;
+        g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
+        px += w + 2;
+      }
+    }
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
