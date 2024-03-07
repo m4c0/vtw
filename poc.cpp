@@ -79,10 +79,11 @@ public:
 
         g.load_glyph();
         auto [x, y, w, h] = gl.rect = g.bitmap_rect();
-        if (px + w + 2 > 1024) { // half width forces line break
+        if (px + w + 2 > 1024) {
           px = 0;
           py += font_h; // TODO: max(h + 2)
         }
+        // TODO: check py overflow
 
         gl.px = px;
         gl.py = py;
