@@ -58,10 +58,14 @@ public:
     auto dset = ps.allocate_descriptor_set(a.iv(), *smp);
 
     {
+      struct glyph {
+        unsigned px{};
+        unsigned py{};
+        wtf::rect rect;
+      };
       unsigned charid[10240]; // TODO: max(codepoint) or hashmap
       unsigned curid{};
-      unsigned px{};
-      unsigned py{};
+      glyph gl{};
 
       voo::mapmem m{a.host_memory()};
       auto charmap = static_cast<unsigned char *>(*m);
@@ -73,15 +77,15 @@ public:
           continue;
 
         g.load_glyph();
-        auto [x, y, w, h] = g.bitmap_rect();
-        if (px + w + 2 > 1024) { // half width forces line break
-          px = 0;
-          py += font_h; // TODO: max(h + 2)
+        auto [x, y, w, h] = gl.rect = g.bitmap_rect();
+        if (gl.px + w + 2 > 1024) { // half width forces line break
+          gl.px = 0;
+          gl.py += font_h; // TODO: max(h + 2)
         }
 
         id = ++curid;
-        g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
-        px += w + 2;
+        g.blit(charmap, 1024, 1024, gl.px - x + 1, gl.py + y + 1);
+        gl.px += w + 2;
       }
     }
 
