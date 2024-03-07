@@ -61,31 +61,35 @@ public:
       struct glyph {
         unsigned px{};
         unsigned py{};
-        wtf::rect rect;
+        wtf::rect rect{};
+        bool in_use{};
       };
-      unsigned charid[10240]; // TODO: max(codepoint) or hashmap
-      unsigned curid{};
-      glyph gl{};
+      glyph charid[10240]; // TODO: max(codepoint) or hashmap
+      unsigned px{};
+      unsigned py{};
 
       voo::mapmem m{a.host_memory()};
       auto charmap = static_cast<unsigned char *>(*m);
 
       auto s = g_face.shape_en(lorem);
       for (auto g : s.glyphs()) {
-        auto &id = charid[g.codepoint()];
-        if (id > 0)
+        auto &gl = charid[g.codepoint()];
+        if (gl.in_use > 0)
           continue;
 
         g.load_glyph();
         auto [x, y, w, h] = gl.rect = g.bitmap_rect();
-        if (gl.px + w + 2 > 1024) { // half width forces line break
-          gl.px = 0;
-          gl.py += font_h; // TODO: max(h + 2)
+        if (px + w + 2 > 1024) { // half width forces line break
+          px = 0;
+          py += font_h; // TODO: max(h + 2)
         }
 
-        id = ++curid;
-        g.blit(charmap, 1024, 1024, gl.px - x + 1, gl.py + y + 1);
-        gl.px += w + 2;
+        gl.px = px;
+        gl.py = py;
+        gl.in_use = true;
+
+        g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
+        px += w + 2;
       }
     }
 
