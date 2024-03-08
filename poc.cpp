@@ -90,7 +90,7 @@ public:
       }
 
       ib.map_all([&](auto p) {
-        constexpr const auto line_h = 0.05;
+        constexpr const auto line_h = static_cast<float>(font_h);
         float px{0};
         float py{line_h};
 
@@ -103,12 +103,12 @@ public:
           auto uv1 = uv0 + gl.uv.zw();
 
           *ps++ = {{px + d.x, py + d.y}, {s.x, s.y}};
-          *cs++ = {0, 0, 0, 1};
+          *cs++ = {0, 0, 0, 0};
           *us++ = {{uv0.x, uv0.y}, {uv1.x, uv1.y}};
           *ms++ = {1, 1, 1, 1};
 
           px += g.x_advance() * line_h / static_cast<float>(font_h);
-          if (px > 1.0) {
+          if (px > 1024.0) {
             px = 0;
             py += line_h;
           }
@@ -120,8 +120,8 @@ public:
       voo::swapchain_and_stuff sw{dq};
 
       quack::upc rpc{
-          .grid_pos = {0.5f, 0.5f},
-          .grid_size = {1.0f, 1.0f},
+          .grid_pos = {512.0f, 512.0f},
+          .grid_size = {1024.0f, 1024.0f},
       };
 
       extent_loop(dq.queue(), sw, [&] {
