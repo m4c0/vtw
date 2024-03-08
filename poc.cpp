@@ -137,41 +137,38 @@ public:
 
     quack::instance_batch ib{ps.create_batch(lorem.size())};
 
+    vtw::glyphmap gmap{};
     vtw::atlas a{dq.physical_device(), ps.allocate_descriptor_set()};
 
-    {
-      vtw::glyphmap gmap{};
+    auto s = g_face.shape_en(lorem);
+    a.allocate_glyphs(s, gmap);
 
-      auto s = g_face.shape_en(lorem);
-      a.allocate_glyphs(s, gmap);
+    ib.map_all([&](auto p) {
+      constexpr const auto font_hf = static_cast<float>(font_h);
+      constexpr const auto line_h = font_hf;
+      float px{0};
+      float py{line_h};
 
-      ib.map_all([&](auto p) {
-        constexpr const auto font_hf = static_cast<float>(font_h);
-        constexpr const auto line_h = font_hf;
-        float px{0};
-        float py{line_h};
+      auto &[cs, ms, ps, us] = p;
+      for (auto g : s.glyphs()) {
+        const auto &gl = gmap[g.codepoint()];
+        auto d = gl.d * line_h / font_hf;
+        auto s = gl.size * line_h / font_hf;
+        auto uv0 = gl.uv.xy();
+        auto uv1 = uv0 + gl.uv.zw();
 
-        auto &[cs, ms, ps, us] = p;
-        for (auto g : s.glyphs()) {
-          const auto &gl = gmap[g.codepoint()];
-          auto d = gl.d * line_h / font_hf;
-          auto s = gl.size * line_h / font_hf;
-          auto uv0 = gl.uv.xy();
-          auto uv1 = uv0 + gl.uv.zw();
+        *ps++ = {{px + d.x, py + d.y}, {s.x, s.y}};
+        *cs++ = {0, 0, 0, 0};
+        *us++ = {{uv0.x, uv0.y}, {uv1.x, uv1.y}};
+        *ms++ = {1, 1, 1, 1};
 
-          *ps++ = {{px + d.x, py + d.y}, {s.x, s.y}};
-          *cs++ = {0, 0, 0, 0};
-          *us++ = {{uv0.x, uv0.y}, {uv1.x, uv1.y}};
-          *ms++ = {1, 1, 1, 1};
-
-          px += g.x_advance() * line_h / static_cast<float>(font_h);
-          if (px > 1024.0) {
-            px = 0;
-            py += line_h * 1.5;
-          }
+        px += g.x_advance() * line_h / static_cast<float>(font_h);
+        if (px > 1024.0) {
+          px = 0;
+          py += line_h * 1.5;
         }
-      });
-    }
+      }
+    });
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
