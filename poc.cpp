@@ -11,6 +11,17 @@ import vee;
 import voo;
 import what_the_font;
 
+namespace vtw {
+struct glyph {
+  dotz::vec2 d{};
+  dotz::vec2 size{};
+  dotz::vec4 uv{};
+};
+struct slot : glyph {
+  bool in_use{};
+};
+} // namespace vtw
+
 static constexpr const jute::view lorem{
     "Enim nostrum omnis dolorum non unde est velit et. Doloribus fugiat "
     "nesciunt delectus debitis ut dolorum at. Illo veniam laboriosam porro "
@@ -53,13 +64,7 @@ public:
     auto dset = ps.allocate_descriptor_set(a.iv(), *smp);
 
     {
-      struct glyph {
-        dotz::vec2 d{};
-        dotz::vec2 size{};
-        dotz::vec4 uv{};
-        bool in_use{};
-      };
-      hai::array<glyph> charid{1024};
+      hai::array<vtw::slot> charid{1024};
       int px{};
       int py{};
 
