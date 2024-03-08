@@ -48,6 +48,27 @@ public:
     return m_map[codepoint];
   }
 };
+class atlas {
+  voo::h2l_image m_atlas;
+  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
+  vee::descriptor_set m_dset;
+
+public:
+  explicit atlas(vee::physical_device pd, vee::descriptor_set dset)
+      : m_atlas{pd, 1024, 1024, false}
+      , m_dset{dset} {
+    vee::update_descriptor_set(dset, 0, m_atlas.iv(), *m_smp);
+  }
+
+  [[nodiscard]] constexpr auto descriptor_set() const noexcept {
+    return m_dset;
+  }
+  [[nodiscard]] constexpr auto host_memory() const noexcept {
+    return m_atlas.host_memory();
+  }
+
+  void setup_copy(vee::command_buffer cb) const { m_atlas.setup_copy(cb); }
+};
 } // namespace vtw
 
 static constexpr const jute::view lorem{
@@ -87,9 +108,7 @@ public:
 
     quack::instance_batch ib{ps.create_batch(lorem.size())};
 
-    voo::h2l_image a{dq, 1024, 1024, false};
-    auto smp = vee::create_sampler(vee::linear_sampler);
-    auto dset = ps.allocate_descriptor_set(a.iv(), *smp);
+    vtw::atlas a{dq.physical_device(), ps.allocate_descriptor_set()};
 
     {
       vtw::glyphmap gmap{};
@@ -168,7 +187,7 @@ public:
           vee::cmd_set_viewport(*scb, sw.extent());
           vee::cmd_set_scissor(*scb, sw.extent());
           ib.build_commands(*scb);
-          ps.cmd_bind_descriptor_set(*scb, dset);
+          ps.cmd_bind_descriptor_set(*scb, a.descriptor_set());
           ps.cmd_push_vert_frag_constants(*scb, upc);
           ps.run(*scb, lorem.size());
         });
