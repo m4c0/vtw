@@ -20,6 +20,34 @@ struct glyph {
 struct slot : glyph {
   bool in_use{};
 };
+class glyphmap {
+  static constexpr const auto initial_cap = 1024;
+  hai::array<vtw::slot> m_map{initial_cap};
+
+public:
+  [[nodiscard]] bool exists(int codepoint) {
+    if (codepoint < 0)
+      return false;
+    if (codepoint > m_map.size())
+      return false;
+    return m_map[codepoint].in_use;
+  }
+  [[nodiscard]] const glyph &operator[](int codepoint) const {
+    static glyph null{};
+    if (codepoint < 0)
+      return null;
+    return m_map[codepoint];
+  }
+  [[nodiscard]] glyph &operator[](int codepoint) {
+    static glyph null{};
+    if (codepoint < 0)
+      return null = {};
+    if (codepoint > m_map.size())
+      m_map.set_capacity(codepoint + 1);
+    m_map[codepoint].in_use = true;
+    return m_map[codepoint];
+  }
+};
 } // namespace vtw
 
 static constexpr const jute::view lorem{
@@ -64,7 +92,7 @@ public:
     auto dset = ps.allocate_descriptor_set(a.iv(), *smp);
 
     {
-      hai::array<vtw::slot> charid{1024};
+      vtw::glyphmap gmap{};
       int px{};
       int py{};
 
@@ -73,12 +101,10 @@ public:
 
       auto s = g_face.shape_en(lorem);
       for (auto g : s.glyphs()) {
-        if (g.codepoint() > charid.size()) {
-          charid.set_capacity(g.codepoint() + 1);
-        }
-        auto &gl = charid[g.codepoint()];
-        if (gl.in_use > 0)
+        if (gmap.exists(g.codepoint()))
           continue;
+
+        auto &gl = gmap[g.codepoint()];
 
         g.load_glyph();
         auto [x, y, w, h] = g.bitmap_rect();
@@ -92,7 +118,6 @@ public:
         gl.d = dotz::vec2{x, -y} / font_hf;
         gl.size = dotz::vec2{w, h} / font_hf;
         gl.uv = dotz::vec4{px + 1, py + 1, w, h} / 1024.0;
-        gl.in_use = true;
 
         g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
         px += w + 2;
@@ -105,7 +130,7 @@ public:
 
         auto &[cs, ms, ps, us] = p;
         for (auto g : s.glyphs()) {
-          const auto &gl = charid[g.codepoint()];
+          const auto &gl = gmap[g.codepoint()];
           auto d = gl.d * line_h;
           auto s = gl.size * line_h;
           auto uv0 = gl.uv.xy();
