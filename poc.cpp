@@ -3,6 +3,7 @@
 export module poc;
 
 import casein;
+import dotz;
 import jute;
 import quack;
 import vee;
@@ -52,9 +53,7 @@ public:
 
     {
       struct glyph {
-        unsigned px{};
-        unsigned py{};
-        wtf::rect rect{};
+        dotz::vec2 d{};
         bool in_use{};
       };
       glyph charid[10240]; // TODO: max(codepoint) or hashmap
@@ -71,15 +70,14 @@ public:
           continue;
 
         g.load_glyph();
-        auto [x, y, w, h] = gl.rect = g.bitmap_rect();
+        auto [x, y, w, h] = g.bitmap_rect();
         if (px + w + 2 > 1024) {
           px = 0;
           py += font_h; // TODO: max(h + 2)
         }
         // TODO: check py overflow
 
-        gl.px = px;
-        gl.py = py;
+        gl.d = dotz::vec2{x, y} / static_cast<float>(font_h);
         gl.in_use = true;
 
         g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
@@ -93,7 +91,9 @@ public:
 
         auto &[cs, ms, ps, us] = p;
         for (auto g : s.glyphs()) {
-          *ps++ = {{px, py}, {0.05, 0.05}};
+          const auto &gl = charid[g.codepoint()];
+          auto d = gl.d * line_h;
+          *ps++ = {{px + d.x, py + d.y}, {0.01, 0.01}};
           *cs++ = {1, 1, 1, 1};
           *us++ = {{0, 0}, {1, 1}};
           *ms++ = {1, 1, 1, 1};
