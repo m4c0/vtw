@@ -82,7 +82,7 @@ public:
         constexpr const auto font_hf = static_cast<float>(font_h);
         gl.d = dotz::vec2{x, -y} / font_hf;
         gl.size = dotz::vec2{w, h} / font_hf;
-        gl.uv = dotz::vec4{px, py, w, h} / 1024.0;
+        gl.uv = dotz::vec4{px + 1, py + 1, w, h} / 1024.0;
         gl.in_use = true;
 
         g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
