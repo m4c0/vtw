@@ -48,7 +48,7 @@ public:
     quack::instance_batch ib{ps.create_batch(lorem.size())};
 
     voo::h2l_image a{dq, 1024, 1024, false};
-    auto smp = vee::create_sampler(vee::nearest_sampler);
+    auto smp = vee::create_sampler(vee::linear_sampler);
     auto dset = ps.allocate_descriptor_set(a.iv(), *smp);
 
     {
