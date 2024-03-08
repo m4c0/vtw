@@ -60,13 +60,42 @@ public:
     vee::update_descriptor_set(dset, 0, m_atlas.iv(), *m_smp);
   }
 
+  void allocate_glyphs(const wtf::buffer &s, glyphmap &gmap) {
+    voo::mapmem m{m_atlas.host_memory()};
+    auto charmap = static_cast<unsigned char *>(*m);
+
+    int px{};
+    int py{};
+    int max_h{};
+
+    for (auto g : s.glyphs()) {
+      if (gmap.exists(g.codepoint()))
+        continue;
+
+      auto &gl = gmap[g.codepoint()];
+
+      g.load_glyph();
+      auto [x, y, w, h] = g.bitmap_rect();
+      max_h = h > max_h ? h : max_h;
+      if (px + w + 2 > 1024) {
+        px = 0;
+        py += max_h + 2;
+        max_h = 0;
+      }
+      // TODO: check py overflow
+
+      gl.d = dotz::vec2{x, -y};
+      gl.size = dotz::vec2{w, h};
+      gl.uv = dotz::vec4{px + 1, py + 1, w, h} / 1024.0;
+
+      g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
+      px += w + 2;
+    }
+  }
+
   [[nodiscard]] constexpr auto descriptor_set() const noexcept {
     return m_dset;
   }
-  [[nodiscard]] constexpr auto host_memory() const noexcept {
-    return m_atlas.host_memory();
-  }
-
   void setup_copy(vee::command_buffer cb) const { m_atlas.setup_copy(cb); }
 };
 } // namespace vtw
@@ -112,46 +141,21 @@ public:
 
     {
       vtw::glyphmap gmap{};
-      int px{};
-      int py{};
-
-      voo::mapmem m{a.host_memory()};
-      auto charmap = static_cast<unsigned char *>(*m);
 
       auto s = g_face.shape_en(lorem);
-      for (auto g : s.glyphs()) {
-        if (gmap.exists(g.codepoint()))
-          continue;
-
-        auto &gl = gmap[g.codepoint()];
-
-        g.load_glyph();
-        auto [x, y, w, h] = g.bitmap_rect();
-        if (px + w + 2 > 1024) {
-          px = 0;
-          py += font_h; // TODO: max(h + 2)
-        }
-        // TODO: check py overflow
-
-        constexpr const auto font_hf = static_cast<float>(font_h);
-        gl.d = dotz::vec2{x, -y} / font_hf;
-        gl.size = dotz::vec2{w, h} / font_hf;
-        gl.uv = dotz::vec4{px + 1, py + 1, w, h} / 1024.0;
-
-        g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
-        px += w + 2;
-      }
+      a.allocate_glyphs(s, gmap);
 
       ib.map_all([&](auto p) {
-        constexpr const auto line_h = static_cast<float>(font_h);
+        constexpr const auto font_hf = static_cast<float>(font_h);
+        constexpr const auto line_h = font_hf;
         float px{0};
         float py{line_h};
 
         auto &[cs, ms, ps, us] = p;
         for (auto g : s.glyphs()) {
           const auto &gl = gmap[g.codepoint()];
-          auto d = gl.d * line_h;
-          auto s = gl.size * line_h;
+          auto d = gl.d * line_h / font_hf;
+          auto s = gl.size * line_h / font_hf;
           auto uv0 = gl.uv.xy();
           auto uv1 = uv0 + gl.uv.zw();
 
@@ -163,7 +167,7 @@ public:
           px += g.x_advance() * line_h / static_cast<float>(font_h);
           if (px > 1024.0) {
             px = 0;
-            py += line_h;
+            py += line_h * 1.5;
           }
         }
       });
