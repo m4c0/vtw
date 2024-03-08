@@ -54,11 +54,13 @@ public:
     {
       struct glyph {
         dotz::vec2 d{};
+        dotz::vec2 size{};
+        dotz::vec4 uv{};
         bool in_use{};
       };
       glyph charid[10240]; // TODO: max(codepoint) or hashmap
-      unsigned px{};
-      unsigned py{};
+      int px{};
+      int py{};
 
       voo::mapmem m{a.host_memory()};
       auto charmap = static_cast<unsigned char *>(*m);
@@ -77,7 +79,10 @@ public:
         }
         // TODO: check py overflow
 
-        gl.d = dotz::vec2{x, y} / static_cast<float>(font_h);
+        constexpr const auto font_hf = static_cast<float>(font_h);
+        gl.d = dotz::vec2{x, -y} / font_hf;
+        gl.size = dotz::vec2{w, h} / font_hf;
+        gl.uv = dotz::vec4{px, py, w, h} / 1024.0;
         gl.in_use = true;
 
         g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
@@ -93,9 +98,13 @@ public:
         for (auto g : s.glyphs()) {
           const auto &gl = charid[g.codepoint()];
           auto d = gl.d * line_h;
-          *ps++ = {{px + d.x, py + d.y}, {0.01, 0.01}};
-          *cs++ = {1, 1, 1, 1};
-          *us++ = {{0, 0}, {1, 1}};
+          auto s = gl.size * line_h;
+          auto uv0 = gl.uv.xy();
+          auto uv1 = uv0 + gl.uv.zw();
+
+          *ps++ = {{px + d.x, py + d.y}, {s.x, s.y}};
+          *cs++ = {0, 0, 0, 1};
+          *us++ = {{uv0.x, uv0.y}, {uv1.x, uv1.y}};
           *ms++ = {1, 1, 1, 1};
 
           px += g.x_advance() * line_h / static_cast<float>(font_h);
