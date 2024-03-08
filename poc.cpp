@@ -44,14 +44,7 @@ public:
 
     quack::pipeline_stuff ps{dq, max_batches};
 
-    quack::instance_batch ib{ps.create_batch(1)};
-    ib.map_all([](auto p) {
-      auto &[cs, ms, ps, us] = p;
-      ps[0] = {{0, 0}, {1, 1}};
-      cs[0] = {};
-      us[0] = {{0, 0}, {1, 1}};
-      ms[0] = {1, 1, 1, 1};
-    });
+    quack::instance_batch ib{ps.create_batch(lorem.size())};
 
     voo::h2l_image a{dq, 1024, 1024, false};
     auto smp = vee::create_sampler(vee::nearest_sampler);
@@ -92,6 +85,26 @@ public:
         g.blit(charmap, 1024, 1024, px - x + 1, py + y + 1);
         px += w + 2;
       }
+
+      ib.map_all([&](auto p) {
+        constexpr const auto line_h = 0.05;
+        float px{0};
+        float py{line_h};
+
+        auto &[cs, ms, ps, us] = p;
+        for (auto g : s.glyphs()) {
+          *ps++ = {{px, py}, {0.05, 0.05}};
+          *cs++ = {1, 1, 1, 1};
+          *us++ = {{0, 0}, {1, 1}};
+          *ms++ = {1, 1, 1, 1};
+
+          px += g.x_advance() * line_h / static_cast<float>(font_h);
+          if (px > 1.0) {
+            px = 0;
+            py += line_h;
+          }
+        }
+      });
     }
 
     while (!interrupted()) {
@@ -114,7 +127,7 @@ public:
           ib.build_commands(*scb);
           ps.cmd_bind_descriptor_set(*scb, dset);
           ps.cmd_push_vert_frag_constants(*scb, upc);
-          ps.run(*scb, 1);
+          ps.run(*scb, lorem.size());
         });
       });
     }
