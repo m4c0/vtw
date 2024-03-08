@@ -4,6 +4,7 @@ export module poc;
 
 import casein;
 import dotz;
+import hai;
 import jute;
 import quack;
 import vee;
@@ -58,7 +59,7 @@ public:
         dotz::vec4 uv{};
         bool in_use{};
       };
-      glyph charid[10240]; // TODO: max(codepoint) or hashmap
+      hai::array<glyph> charid{1024};
       int px{};
       int py{};
 
@@ -67,6 +68,9 @@ public:
 
       auto s = g_face.shape_en(lorem);
       for (auto g : s.glyphs()) {
+        if (g.codepoint() > charid.size()) {
+          charid.set_capacity(g.codepoint() + 1);
+        }
         auto &gl = charid[g.codepoint()];
         if (gl.in_use > 0)
           continue;
