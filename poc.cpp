@@ -1,5 +1,5 @@
 #pragma leco app
-#pragma leco add_resource "VictorMono-Regular.otf"
+#pragma leco add_resource "Vazirmatn-Regular.ttf"
 export module poc;
 
 import casein;
@@ -125,7 +125,7 @@ static constexpr const jute::view lorem{
 static constexpr const auto font_h = 32;
 
 static wtf::library g_library{};
-static wtf::face g_face = g_library.new_face("VictorMono-Regular.otf", font_h);
+static wtf::face g_face = g_library.new_face("Vazirmatn-Regular.ttf", font_h);
 
 constexpr const auto max_batches = 100;
 class renderer : public voo::casein_thread {
