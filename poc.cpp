@@ -98,6 +98,35 @@ public:
   }
   void setup_copy(vee::command_buffer cb) const { m_atlas.setup_copy(cb); }
 };
+class scriber {
+  vtw::glyphmap m_gmap{};
+  vtw::atlas m_a;
+  dotz::vec2 m_bounds{};
+  dotz::vec2 m_pen{};
+
+public:
+  scriber(vee::physical_device pd, vee::descriptor_set dset) : m_a{pd, dset} {}
+
+  constexpr void bounds(dotz::vec2 b) { m_bounds = b; }
+  constexpr void pen(dotz::vec2 p) { m_pen = p; }
+
+  void draw(wtf::buffer s, auto fn) {
+    m_a.allocate_glyphs(s, m_gmap);
+    for (auto g : s.glyphs()) {
+      const auto &gl = m_gmap[g.codepoint()];
+      fn(m_pen, gl);
+
+      m_pen.x += g.x_advance();
+      m_pen.y += g.y_advance();
+    }
+  }
+
+  [[nodiscard]] constexpr auto descriptor_set() const noexcept {
+    return m_a.descriptor_set();
+  }
+
+  void setup_copy(vee::command_buffer cb) { m_a.setup_copy(cb); }
+};
 } // namespace vtw
 
 static constexpr const jute::view lorem{
@@ -139,25 +168,21 @@ public:
 
     quack::instance_batch ib{ps.create_batch(lorem.size())};
 
-    vtw::glyphmap gmap{};
-    vtw::atlas a{dq.physical_device(), ps.allocate_descriptor_set()};
+    vtw::scriber scr{dq.physical_device(), ps.allocate_descriptor_set()};
+    scr.bounds({1024, 1024});
 
     auto s = g_face.shape_en(lorem);
-    a.allocate_glyphs(s, gmap);
 
-    const auto scribe = [&s, &gmap](float line_h, auto fn) {
-      dotz::vec2 pen{0, font_h};
-
-      for (auto g : s.glyphs()) {
-        const auto &gl = gmap[g.codepoint()];
-        fn(pen, gl);
-
-        pen.x += g.x_advance();
+    const auto scribe = [&s, &scr](float line_h, auto fn) {
+      scr.pen({0, font_h});
+      scr.draw(s, [&](auto pen, const auto &gl) {
         if (pen.x > 1024.0) {
           pen.x = 0;
           pen.y += line_h;
+          scr.pen(pen);
         }
-      }
+        fn(pen, gl);
+      });
     };
 
     ib.map_all([&scribe](auto p) {
@@ -194,13 +219,13 @@ public:
         auto upc = quack::adjust_aspect(rpc, sw.aspect());
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
           ib.setup_copy(*pcb);
-          a.setup_copy(*pcb);
+          scr.setup_copy(*pcb);
 
           auto scb = sw.cmd_render_pass(pcb);
           vee::cmd_set_viewport(*scb, sw.extent());
           vee::cmd_set_scissor(*scb, sw.extent());
           ib.build_commands(*scb);
-          ps.cmd_bind_descriptor_set(*scb, a.descriptor_set());
+          ps.cmd_bind_descriptor_set(*scb, scr.descriptor_set());
           ps.cmd_push_vert_frag_constants(*scb, upc);
           ps.run(*scb, lorem.size());
         });
