@@ -125,12 +125,14 @@ static constexpr const jute::view lorem{
 static constexpr const auto font_h = 32;
 
 static wtf::library g_library{};
-static wtf::face g_face = g_library.new_face("Vazirmatn-Regular.ttf", font_h);
+static wtf::face g_face = g_library.new_face("Vazirmatn-Regular.ttf");
 
 constexpr const auto max_batches = 100;
 class renderer : public voo::casein_thread {
 public:
   void run() override {
+    g_face.set_char_size(font_h);
+
     voo::device_and_queue dq{"quack", native_ptr()};
 
     quack::pipeline_stuff ps{dq, max_batches};
