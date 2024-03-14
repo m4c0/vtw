@@ -150,26 +150,25 @@ public:
       // consider both variables if they differ for any reason.
       constexpr const auto ratio = line_h / font_hf;
 
-      float px{0};
-      float py{line_h};
+      dotz::vec2 pen{0.0, line_h};
 
       auto &[cs, ms, ps, us] = p;
       for (auto g : s.glyphs()) {
         const auto &gl = gmap[g.codepoint()];
-        auto d = gl.d * ratio;
+        auto d = (pen + gl.d) * ratio;
         auto s = gl.size * ratio;
         auto uv0 = gl.uv.xy();
         auto uv1 = uv0 + gl.uv.zw();
 
-        *ps++ = {{px + d.x, py + d.y}, {s.x, s.y}};
+        *ps++ = {{d.x, d.y}, {s.x, s.y}};
         *cs++ = {0, 0, 0, 0};
         *us++ = {{uv0.x, uv0.y}, {uv1.x, uv1.y}};
         *ms++ = {1, 1, 1, 1};
 
-        px += g.x_advance() * ratio;
-        if (px > 1024.0) {
-          px = 0;
-          py += line_h * 1.5;
+        pen.x += g.x_advance();
+        if (pen.x > 1024.0) {
+          pen.x = 0;
+          pen.y += line_h * 1.5;
         }
       }
     });
