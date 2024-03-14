@@ -143,18 +143,30 @@ public:
     auto s = g_face.shape_en(lorem);
     a.allocate_glyphs(s, gmap);
 
-    ib.map_all([&](auto p) {
+    const auto scribe = [&s, &gmap](float line_h, auto fn) {
+      dotz::vec2 pen{0.0, line_h};
+
+      for (auto g : s.glyphs()) {
+        const auto &gl = gmap[g.codepoint()];
+        fn(pen, gl);
+
+        pen.x += g.x_advance();
+        if (pen.x > 1024.0) {
+          pen.x = 0;
+          pen.y += line_h * 1.5;
+        }
+      }
+    };
+
+    ib.map_all([&scribe](auto p) {
       constexpr const auto font_hf = static_cast<float>(font_h);
       constexpr const auto line_h = font_hf;
       // This is obviously "1" in this example, but illustrates how we need to
       // consider both variables if they differ for any reason.
       constexpr const auto ratio = line_h / font_hf;
 
-      dotz::vec2 pen{0.0, line_h};
-
       auto &[cs, ms, ps, us] = p;
-      for (auto g : s.glyphs()) {
-        const auto &gl = gmap[g.codepoint()];
+      scribe(line_h, [&](auto pen, const auto &gl) {
         auto d = (pen + gl.d) * ratio;
         auto s = gl.size * ratio;
         auto uv0 = gl.uv.xy();
@@ -164,13 +176,7 @@ public:
         *cs++ = {0, 0, 0, 0};
         *us++ = {{uv0.x, uv0.y}, {uv1.x, uv1.y}};
         *ms++ = {1, 1, 1, 1};
-
-        pen.x += g.x_advance();
-        if (pen.x > 1024.0) {
-          pen.x = 0;
-          pen.y += line_h * 1.5;
-        }
-      }
+      });
     });
 
     while (!interrupted()) {
