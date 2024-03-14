@@ -146,14 +146,18 @@ public:
     ib.map_all([&](auto p) {
       constexpr const auto font_hf = static_cast<float>(font_h);
       constexpr const auto line_h = font_hf;
+      // This is obviously "1" in this example, but illustrates how we need to
+      // consider both variables if they differ for any reason.
+      constexpr const auto ratio = line_h / font_hf;
+
       float px{0};
       float py{line_h};
 
       auto &[cs, ms, ps, us] = p;
       for (auto g : s.glyphs()) {
         const auto &gl = gmap[g.codepoint()];
-        auto d = gl.d * line_h / font_hf;
-        auto s = gl.size * line_h / font_hf;
+        auto d = gl.d * ratio;
+        auto s = gl.size * ratio;
         auto uv0 = gl.uv.xy();
         auto uv1 = uv0 + gl.uv.zw();
 
@@ -162,7 +166,7 @@ public:
         *us++ = {{uv0.x, uv0.y}, {uv1.x, uv1.y}};
         *ms++ = {1, 1, 1, 1};
 
-        px += g.x_advance() * line_h / static_cast<float>(font_h);
+        px += g.x_advance() * ratio;
         if (px > 1024.0) {
           px = 0;
           py += line_h * 1.5;
