@@ -144,7 +144,7 @@ public:
     a.allocate_glyphs(s, gmap);
 
     const auto scribe = [&s, &gmap](float line_h, auto fn) {
-      dotz::vec2 pen{0.0, line_h};
+      dotz::vec2 pen{0, font_h};
 
       for (auto g : s.glyphs()) {
         const auto &gl = gmap[g.codepoint()];
@@ -153,20 +153,21 @@ public:
         pen.x += g.x_advance();
         if (pen.x > 1024.0) {
           pen.x = 0;
-          pen.y += line_h * 1.5;
+          pen.y += line_h;
         }
       }
     };
 
     ib.map_all([&scribe](auto p) {
       constexpr const auto font_hf = static_cast<float>(font_h);
-      constexpr const auto line_h = font_hf;
+      // Size of font on screen, in screen units
+      constexpr const auto font_scr_h = font_hf;
       // This is obviously "1" in this example, but illustrates how we need to
       // consider both variables if they differ for any reason.
-      constexpr const auto ratio = line_h / font_hf;
+      constexpr const auto ratio = font_scr_h / font_hf;
 
       auto &[cs, ms, ps, us] = p;
-      scribe(line_h, [&](auto pen, const auto &gl) {
+      scribe(font_hf * 1.5, [&](auto pen, const auto &gl) {
         auto d = (pen + gl.d) * ratio;
         auto s = gl.size * ratio;
         auto uv0 = gl.uv.xy();
