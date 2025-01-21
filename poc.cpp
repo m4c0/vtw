@@ -221,7 +221,10 @@ public:
       extent_loop(dq.queue(), sw, [&] {
         auto upc = quack::adjust_aspect(rpc, sw.aspect());
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
-          auto scb = sw.cmd_render_pass({ *pcb });
+          auto scb = sw.cmd_render_pass({
+              .command_buffer = *pcb,
+              .clear_colours { vee::clear_colour({}) },
+          });
           quack::run(&ps, {
               .sw = &sw,
               .scb = *scb,
