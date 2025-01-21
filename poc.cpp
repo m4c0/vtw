@@ -162,13 +162,11 @@ public:
   void run() override {
     g_face.set_char_size(font_h);
 
-    voo::device_and_queue dq{"quack", native_ptr()};
+    voo::device_and_queue dq{"quack"};
 
-    quack::pipeline_stuff ps{dq, max_batches};
+    quack::pipeline_stuff ps { dq, max_batches };
 
-    quack::instance_batch ib{ps.create_batch(lorem.size())};
-
-    vtw::scriber scr{dq.physical_device(), ps.allocate_descriptor_set()};
+    vtw::scriber scr { dq.physical_device(), ps.allocate_descriptor_set() };
     scr.bounds({1024, 1024});
 
     auto s = g_face.shape_en(lorem);
@@ -184,8 +182,7 @@ public:
         fn(pen, gl);
       });
     };
-
-    ib.map_all([&scribe](auto p) {
+    const auto update_data = [&scribe](quack::instance *& i) {
       constexpr const auto font_hf = static_cast<float>(font_h);
       // Size of font on screen, in screen units
       constexpr const auto font_scr_h = font_hf;
@@ -193,19 +190,25 @@ public:
       // consider both variables if they differ for any reason.
       constexpr const auto ratio = font_scr_h / font_hf;
 
-      auto &[cs, ms, ps, us] = p;
       scribe(font_hf * 1.5, [&](auto pen, const auto &gl) {
         auto d = (pen + gl.d) * ratio;
         auto s = gl.size * ratio;
         auto uv0 = gl.uv.xy();
         auto uv1 = uv0 + gl.uv.zw();
 
-        *ps++ = {{d.x, d.y}, {s.x, s.y}};
-        *cs++ = {0, 0, 0, 0};
-        *us++ = {{uv0.x, uv0.y}, {uv1.x, uv1.y}};
-        *ms++ = {1, 1, 1, 1};
+        *i++ = (quack::instance) {
+          .position   = d,
+          .size       = s,
+          .uv0        = uv0,
+          .uv1        = uv1,
+          .colour     = {},
+          .multiplier = { 1, 1, 1, 1 },
+        };
       });
-    });
+    };
+
+    quack::buffer_updater u { &dq, lorem.size(), update_data };
+    u.run_once();
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
@@ -218,23 +221,18 @@ public:
       extent_loop(dq.queue(), sw, [&] {
         auto upc = quack::adjust_aspect(rpc, sw.aspect());
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
-          ib.setup_copy(*pcb);
-          scr.setup_copy(*pcb);
-
-          auto scb = sw.cmd_render_pass(pcb);
-          vee::cmd_set_viewport(*scb, sw.extent());
-          vee::cmd_set_scissor(*scb, sw.extent());
-          ib.build_commands(*scb);
-          ps.cmd_bind_descriptor_set(*scb, scr.descriptor_set());
-          ps.cmd_push_vert_frag_constants(*scb, upc);
-          ps.run(*scb, lorem.size());
+          auto scb = sw.cmd_render_pass({ *pcb });
+          quack::run(&ps, {
+              .sw = &sw,
+              .scb = *scb,
+              .pc = &upc,
+              .inst_buffer = u.data().local_buffer(),
+              .atlas_dset = scr.descriptor_set(),
+              .count = lorem.size(),
+          });
         });
       });
     }
   }
-};
+} t;
 
-extern "C" void casein_handle(const casein::event &e) {
-  static renderer r{};
-  r.handle(e);
-}
