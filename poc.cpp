@@ -219,7 +219,6 @@ public:
       };
 
       extent_loop(dq.queue(), sw, [&] {
-        auto upc = quack::adjust_aspect(rpc, sw.aspect());
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
           scr.setup_copy(*pcb);
 
@@ -230,7 +229,7 @@ public:
           quack::run(&ps, {
               .sw = &sw,
               .scb = *scb,
-              .pc = &upc,
+              .pc = &rpc,
               .inst_buffer = u.data().local_buffer(),
               .atlas_dset = scr.descriptor_set(),
               .count = lorem.size(),
