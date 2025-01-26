@@ -48,7 +48,7 @@ public:
 
     quack::pipeline_stuff ps { dq, max_batches };
 
-    vtw::scriber scr { dq.physical_device(), ps.allocate_descriptor_set() };
+    vtw::scriber scr { dq.physical_device() };
     scr.bounds({1024, 1024});
 
     auto s = g_face.shape_en(lorem);

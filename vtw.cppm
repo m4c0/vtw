@@ -40,13 +40,13 @@ namespace vtw {
   class atlas {
     voo::h2l_image m_atlas;
     vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
-    vee::descriptor_set m_dset;
+    vee::descriptor_set_layout m_dsl = vee::create_descriptor_set_layout({ vee::dsl_fragment_sampler() });
+    vee::descriptor_pool m_pool = vee::create_descriptor_pool(1, { vee::combined_image_sampler() });
+    vee::descriptor_set m_dset = vee::allocate_descriptor_set(*m_pool, *m_dsl);;
   
   public:
-    explicit atlas(vee::physical_device pd, vee::descriptor_set dset)
-        : m_atlas{pd, 1024, 1024, false}
-        , m_dset{dset} {
-      vee::update_descriptor_set(dset, 0, m_atlas.iv(), *m_smp);
+    explicit atlas(vee::physical_device pd) : m_atlas{pd, 1024, 1024, false} {
+      vee::update_descriptor_set(m_dset, 0, m_atlas.iv(), *m_smp);
     }
   
     void allocate_glyphs(const wtf::buffer &s, glyphmap &gmap) {
@@ -82,6 +82,7 @@ namespace vtw {
     }
   
     [[nodiscard]] constexpr auto descriptor_set() const { return m_dset; }
+    [[nodiscard]] constexpr auto descriptor_set_layout() const { return *m_dsl; }
     void setup_copy(vee::command_buffer cb) const { m_atlas.setup_copy(cb); }
   };
   export class scriber {
@@ -91,7 +92,7 @@ namespace vtw {
     dotz::vec2 m_pen{};
   
   public:
-    scriber(vee::physical_device pd, vee::descriptor_set dset) : m_a{pd, dset} {}
+    scriber(vee::physical_device pd) : m_a{pd} {}
   
     constexpr void bounds(dotz::vec2 b) { m_bounds = b; }
     constexpr void pen(dotz::vec2 p) { m_pen = p; }
@@ -109,6 +110,9 @@ namespace vtw {
   
     [[nodiscard]] constexpr auto descriptor_set() const {
       return m_a.descriptor_set();
+    }
+    [[nodiscard]] constexpr auto descriptor_set_layout() const {
+      return m_a.descriptor_set_layout();
     }
   
     void setup_copy(vee::command_buffer cb) { m_a.setup_copy(cb); }
