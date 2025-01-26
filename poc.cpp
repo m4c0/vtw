@@ -5,6 +5,7 @@ export module poc;
 import casein;
 import jute;
 import quack;
+import vapp;
 import vee;
 import voo;
 import vtw;
@@ -38,7 +39,7 @@ static wtf::library g_library{};
 static wtf::face g_face = g_library.new_face("Vazirmatn-Regular.ttf");
 
 constexpr const auto max_batches = 100;
-class renderer : public voo::casein_thread {
+class renderer : public vapp {
 public:
   void run() override {
     g_face.set_char_size(font_h);
