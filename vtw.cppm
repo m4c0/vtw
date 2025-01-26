@@ -40,13 +40,11 @@ namespace vtw {
   class atlas {
     voo::h2l_image m_atlas;
     vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
-    vee::descriptor_set_layout m_dsl = vee::create_descriptor_set_layout({ vee::dsl_fragment_sampler() });
-    vee::descriptor_pool m_pool = vee::create_descriptor_pool(1, { vee::combined_image_sampler() });
-    vee::descriptor_set m_dset = vee::allocate_descriptor_set(*m_pool, *m_dsl);;
+    voo::single_dset m_dset { vee::dsl_fragment_sampler(), vee::combined_image_sampler() };;
   
   public:
     explicit atlas(vee::physical_device pd) : m_atlas{pd, 1024, 1024, false} {
-      vee::update_descriptor_set(m_dset, 0, m_atlas.iv(), *m_smp);
+      vee::update_descriptor_set(m_dset.descriptor_set(), 0, m_atlas.iv(), *m_smp);
     }
   
     void allocate_glyphs(const wtf::buffer &s, glyphmap &gmap) {
@@ -81,8 +79,8 @@ namespace vtw {
       }
     }
   
-    [[nodiscard]] constexpr auto descriptor_set() const { return m_dset; }
-    [[nodiscard]] constexpr auto descriptor_set_layout() const { return *m_dsl; }
+    [[nodiscard]] constexpr auto descriptor_set() const { return m_dset.descriptor_set(); }
+    [[nodiscard]] constexpr auto descriptor_set_layout() const { return m_dset.descriptor_set_layout(); }
     void setup_copy(vee::command_buffer cb) const { m_atlas.setup_copy(cb); }
   };
   export class scriber {
