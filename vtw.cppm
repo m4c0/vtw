@@ -115,7 +115,10 @@ namespace vtw {
     }
   
     void setup_copy(vee::command_buffer cb) { m_a.setup_copy(cb); }
-    void clear_host(vee::command_buffer cb) const { m_a.clear_host(cb); }
+    void clear_glyphs(vee::command_buffer cb) {
+      m_gmap = {};
+      m_a.clear_host(cb);
+    }
   };
 }
 
