@@ -43,7 +43,7 @@ namespace vtw {
     voo::single_dset m_dset { vee::dsl_fragment_sampler(), vee::combined_image_sampler() };;
   
   public:
-    explicit atlas(vee::physical_device pd) : m_atlas{pd, 1024, 1024, false} {
+    explicit atlas(vee::physical_device pd) : m_atlas{{ pd, 1024, 1024, vee::image_format_r8, true }} {
       vee::update_descriptor_set(m_dset.descriptor_set(), 0, m_atlas.iv(), *m_smp);
     }
   
@@ -82,6 +82,7 @@ namespace vtw {
     [[nodiscard]] constexpr auto descriptor_set() const { return m_dset.descriptor_set(); }
     [[nodiscard]] constexpr auto descriptor_set_layout() const { return m_dset.descriptor_set_layout(); }
     void setup_copy(vee::command_buffer cb) const { m_atlas.setup_copy(cb); }
+    void clear_host(vee::command_buffer cb) const { m_atlas.clear_host(cb); }
   };
   export class scriber {
     vtw::glyphmap m_gmap{};
@@ -114,6 +115,7 @@ namespace vtw {
     }
   
     void setup_copy(vee::command_buffer cb) { m_a.setup_copy(cb); }
+    void clear_host(vee::command_buffer cb) const { m_a.clear_host(cb); }
   };
 }
 
