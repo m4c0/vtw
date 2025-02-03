@@ -43,7 +43,7 @@ namespace vtw {
     voo::single_dset m_dset { vee::dsl_fragment_sampler(), vee::combined_image_sampler() };;
   
   public:
-    explicit atlas(vee::physical_device pd) : m_atlas{{ pd, 1024, 1024, vee::image_format_r8, true }} {
+    explicit atlas(vee::physical_device pd) : m_atlas{{ pd, 1024, 1024, VK_FORMAT_R8_UNORM, true }} {
       vee::update_descriptor_set(m_dset.descriptor_set(), 0, m_atlas.iv(), *m_smp);
     }
   
