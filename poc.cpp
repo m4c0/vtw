@@ -44,7 +44,7 @@ public:
   void run() override {
     g_face.set_char_size(font_h);
 
-    voo::device_and_queue dq{"quack"};
+    voo::device_and_queue dq { "quack", casein::native_ptr };
 
     quack::pipeline_stuff ps { dq, max_batches };
 
